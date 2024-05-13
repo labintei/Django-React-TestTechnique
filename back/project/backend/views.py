@@ -1,78 +1,66 @@
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer
+import jwt
+from datetime import datetime, timedelta
+from django.conf import settings
+from rest_framework import generics, status
 from .models import User
-from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import UserSerializer, UserLoginSerializer
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import User, ChatRoom
+from .serializers import UserSerializer, UserLoginSerializer, ChatRoomSerializer
 from rest_framework.permissions import IsAuthenticated
 
+from datetime import datetime, timedelta, timezone
+
+def generate_jwt(user):
+    payload = {
+        'user_id': user.id,
+        'exp': datetime.now(timezone.utc) + timedelta(minutes=60),  # Corrected
+        'iat': datetime.now(timezone.utc)  # Corrected
+    }
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+    return token
 
 
+class UserRegistrationView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
-
-class CustomTokenObtainPairView(APIView):
-    # permission_classes = [IsAuthenticated]
-    def post(self, request):
-        token_obtain_pair_view = TokenObtainPairView.as_view()
-        response = token_obtain_pair_view(request)
-        if response.status_code == status.HTTP_200_OK:
-            user = authenticate(username=request.data.get('username'), password=request.data.get('password'))
-            if user:
-                refresh = RefreshToken.for_user(user)
-                response.data['refresh'] = str(refresh)
-                response.data['access'] = str(refresh.access_token)
-        return response
-
-
-class RegisterAPIView(APIView):
-#     permission_classes = [IsAuthenticated]
-    def post(self, request):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            refresh = RefreshToken.for_user(user)
-            response = Response({
-                'token': str(refresh.access_token),
-                'user_id': user.id
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            user = User.objects.create(
+                username=serializer.validated_data['username'],
+                password=serializer.validated_data['password']
+            )
+            access_token = generate_jwt(user)
+            return Response({
+                'user': serializer.data,
+                'access': access_token,
             }, status=status.HTTP_201_CREATED)
-            return response
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class UserLoginView(generics.GenericAPIView):
+    serializer_class = UserLoginSerializer
 
-class LoginAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self, request):
-        login = request.data.get('login')
-        password = request.data.get('password')
-        user = User.objects.filter(login=login, password=password).first()
-        if user:
-            refresh = RefreshToken.for_user(user)
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            user = serializer.validated_data  # Since validate returns user, it's stored here
+            access_token = generate_jwt(user)
             return Response({
-                'token': str(refresh.access_token),
-                'user_id': user.id
+                'user': UserSerializer(user).data,  # Serialize user data securely
+                'access': access_token,
             }, status=status.HTTP_200_OK)
         else:
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid username or password", status=status.HTTP_404_NOT_FOUND)
 
 
-
-class ChatroomsAPIView(APIView):
+class ChatRoomCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
-    def get(self, request):
-        print("Chatrooms")
-        print("Where are in Chatrooms")
-        print(request)
-        return Response({'message': 'Chatrooms list'}, status=status.HTTP_200_OK)
 
-class OptionsAPIView(APIView):
-    def options(self, request):
-        allowed_methods = ['GET', 'POST']
-        user = request.user  # Get the authenticated user
-        user_data = {
-            'username': user.username,
-            'email': user.email,  # or any other user information you want to return
-            # Add more user data fields as needed
-        }
-        return Response(user_data, status=status.HTTP_200_OK)
+    def post(self, request, *args, **kwargs):
+        print("Authorization Header:", request.headers.get('Authorization', 'No header found'))
+        print("Handling POST request.")
+        return Response("Hey", status=status.HTTP_201_CREATED)

@@ -11,8 +11,8 @@ const ChatAsideBar = () => {
     useEffect(() => {
         const fetchChatrooms = async () => {
           try {
-            const response = await AuthService.getChatRooms();
-            console.log(response);
+            //const response = await AuthService.getChatRooms();
+            // console.log(response);
             // setRooms(response.data);
           } catch (error) {
             console.error('Error fetching chatrooms:', error);
@@ -22,9 +22,15 @@ const ChatAsideBar = () => {
     }, []);
     
     const handleCreateRoom = () => {
-        setRoomName('');
-        setPopuphidden(false)
-
+        console.log('Creating room:', roomName);
+        try {
+            AuthService.createChatRoom(roomName);
+            setRoomName('');
+            setPopuphidden(false)
+        }
+        catch (error) {
+            console.error('Error creating chatroom:', error);
+        }
     };
 
     return (

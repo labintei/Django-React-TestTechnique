@@ -22,12 +22,7 @@ function Register() {
 
         try {
             await AuthService.registerUser(username, password);
-            // Redirect to login page
-            console.log(AuthService.isAuthenticated)
             navigate('/home');
-            console.log(AuthService.isAuthenticated)
-            // window.location.href = '/home';
-            // console.log(AuthService.isAuthenticated)
         } catch (error) {
             console.error(error);
             // Handle registration error

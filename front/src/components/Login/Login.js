@@ -17,15 +17,15 @@ function Login() {
         setPassword(e.target.value);
     };
 
-    const handleSubmit = async (e) => {    
+    const handleSubmit = async (e) => {   
+        e.preventDefault();
         try {
-            await AuthService.loginUser(username, password);
-            console.log("Way to home :", AuthService.isAuthenticated);
+            await AuthService.login(username, password);
             navigate('/home');
         } catch (error) {
             console.error(error);
         }
-        e.preventDefault();
+        
         // Add your login logic here
     };
 

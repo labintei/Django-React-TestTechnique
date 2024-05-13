@@ -14,11 +14,8 @@ class AuthService {
 
     async getTokenRegistration(username, password) {
         try {
-            const response = await axios.post(`${API_URL}register/`, { login: username, password });
+            const response = await axios.post(`${API_URL}register/`, { username: username, password: password });
             AuthService.isAuthenticated = true;
-            AuthService.token = response.data.token;
-            console.log("Register response");
-            console.log(AuthService.token);
             return response.data;
           } catch (error) {
             throw new Error('Sign-up failed');
@@ -28,76 +25,67 @@ class AuthService {
     async registerUser (username, password) {
         let token = await this.getTokenRegistration(username, password);
         this.isAuthenticated = true;
-        // this.loginUser(username, password);
-        console.log("this is the token");
-        console.log(token);
+        this.user = token && token.user && token.user.username ? token.user.username : null;
+        this.token = token && token.access ? token.access : null;
     };
 
-    async getChatRooms () {
+    async createChatRoom (roomName) {
+        console.log("AuthService.token")
+        console.log(this.token);
         try {
-            console.log("Get Rooms Chat");
-            console.log(AuthService.token);
-            // const response = await axios.get(`${API_URL}chatrooms/`, { headers: { 
-            //     Authorization: 
-            //         `Bearer ${AuthService.token}`, 
-            //         'Content-Type': 'application/json'}});
-            
-            const response = await axios.options(`${API_URL}options/`, { headers: {
-                Authorization: 
-                    `Bearer ${AuthService.token}`, 
-                    'Content-Type': 'application/json'}, date : {text: "test"}});
-            return response.data;
-          } catch (error) {
-            throw new Error('Get chatrooms failed');
-        }
-    };
+                const response = await axios.post(`${API_URL}chatrooms/`, 
+                { 
+                    title: roomName, 
+                    user: AuthService.user
+                },
+                {
+                    headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    }
+                }
+                ).then(response => {
+                    // Handle successful response
+                  })
+                  .catch(error => {
+                    if (error.response) {
+                      console.error('Error data:', error.response.data);
+                      console.error('Error status:', error.response.status);
+                      console.error('Error headers:', error.response.headers);
+                    } else if (error.request) {
+                  
+                      console.error('Error request:', error.request);
+                    } else {
+                      // Something happened in setting up the request that triggered an Error
+                      console.error('Error message:', error.message);
+                    }
+                    console.error('Error config:', error.config);
+                  });
+                return response.data;
+            } catch (error) {
+                // throw new Error('Create chatroom failed');
+            }
+        
+    }
 
-    logUser (username, password) {
+    async logUser (username, password) {
         try {
-            const response = this.loginUser   
-            return response.data;
+            const token = await axios.post(`${API_URL}login/`, { username: username, password: password }); 
+            return token;
           } catch (error) {
             throw new Error('Login failed');
         }
     };
 
-    // async loginUser (username, password) {
-    //     try {
-    //         const response = await axios.post(`${API_URL}login/`, { login: username, password });
-    //         AuthService.isAuthenticated = true;
-    //         this.isAuthenticated = true;
-    //         this.token = response.data.token;
-    //         console.log("this is the answer");
-    //         console.log(response.data);
-    //         return response.data;
-    //       } catch (error) {
-    //         throw new Error('Login failed');
-    //     }
-    // };
-
-    // logoutUser (username, password) {
-    //     try {
-    //         const response = axios.post(`${API_URL}logout/`);
-    //         AuthService.isAuthenticated = false;
-    //         return response.data;
-    //       }
-    //         catch (error) {
-    //             throw new Error('Logout failed');
-    //     }
-    // };
-
-    // Add any additional methods or functionality as needed
+    async login (username, password) {
+        let token = await this.logUser(username, password);
+        token = token.data;
+        this.isAuthenticated = true;
+        console.log("token")
+        console.log(token);
+        this.user = token && token.user && token.user.username ? token.user.username : null;
+        this.token = token && token.access ? token.access : null;
+    }
 
 }
 
 export default new AuthService();
-
-// try {
-        //     const response = axios.post(`${API_URL}register/`, { login: username, password });
-        //     AuthService.isAuthenticated = true;
-        //     console.log("this is the answer");
-        //     console.log(response.data);
-        //     return response.data;
-        //   } catch (error) {
-        //     throw new Error('Sign-up failed');
-        // }
